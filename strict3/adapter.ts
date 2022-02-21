@@ -1,25 +1,38 @@
-import {AssertedBinding, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
+import {AssertedBinding, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
+import {MessageInfrastructure} from "./message_infrastructure";
+import {MessageSchema, RoleBindings} from "./protocol";
 
-export interface MessageSchema {
-    inParams: ParamBindings;
-    outParams: ParamBindings;
+export interface Adapter<B extends ParamBindings> {
+    bindings: B;
+    roleBindings: RoleBindings;
+    messageInfrastructure: MessageInfrastructure;
 }
 
+function extractMessageBindings<M extends MessageSchema>(bindings: ParamBindings & MessagePayload<M>, messageSchema: M): MessagePayload<M> {
+    let payload: { [key in keyof MessagePayload<M>]: any };
+    payload = <any>{}; // FIXME
+    for (let key in {...messageSchema.inParams, ...messageSchema.outParams}) {
+        // @ts-ignore FIXME
+        payload[key] = bindings[key];
+    }
+    return payload;
+}
 
-
-export function send<CB extends ParamBindings, M extends MessageSchema, O extends MessageSchema['outParams']>(
-    currBindings: AssertedBinding<CB, MessagePreBindingAssertions<M>>,
+export async function send<A extends Adapter<ParamBindings>, M extends MessageSchema, O extends M['outParams']>(
+    adapter: A & Adapter<AssertedBinding<A['bindings'], MessagePreBindingAssertions<M>>>,
     messageSchema: M,
     message: O
-): CB & O {
-    throw new Error('Not Implemented');
+): Promise<A & Adapter<O>> {
+    const bindings = Object.assign(adapter.bindings, message);
+    await adapter.messageInfrastructure.send(messageSchema.fromRole, extractMessageBindings(bindings, messageSchema))
+    return Object.assign(adapter, {bindings});
 }
 
 // TODO Check for impossible assertions for example, waiting for an amount parameter to be bound by a boolean type even though the protocol event schema defines it as a number
-export function when<CB extends ParamBindings, BA>(
-    currBindings: CB,
-    satisfiableEvent: Exclude<BA, CB>   //FIXME Prevent specifying parameters that are already bound
-): Promise<CB & BA> {
+export function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>(
+    currBindings: A,
+    satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
+): Promise<A & Adapter<BA>> {
     throw new Error('Not Implemented');
 }
 
