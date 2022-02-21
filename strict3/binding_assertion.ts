@@ -17,7 +17,7 @@ interface BindingAssertions {
 export type SatisfiableEvent = ParamBindings;
 
 export type MessagePayload<M extends MessageSchema> = M['inParams'] & M['outParams'];
-type P1 = MessagePayload<{ inParams: {a: number}, outParams: {}, fromRole: {name: ''}, toRoles: []}>;
+type P1 = MessagePayload<{ name: 'asd', inParams: {a: number}, outParams: {}, fromRole: {name: ''}, toRoles: []}>;
 
 export type MessagePreBindingAssertions<M extends MessageSchema> =
     BindingAssertions

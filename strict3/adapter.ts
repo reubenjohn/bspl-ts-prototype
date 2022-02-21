@@ -24,13 +24,13 @@ export async function send<A extends Adapter<ParamBindings>, M extends MessageSc
     message: O
 ): Promise<A & Adapter<O>> {
     const bindings = Object.assign(adapter.bindings, message);
-    await adapter.messageInfrastructure.send(messageSchema.fromRole, extractMessageBindings(bindings, messageSchema))
+    await adapter.messageInfrastructure.send(messageSchema.toRoles.map(({name}) => adapter.roleBindings[name]), extractMessageBindings(bindings, messageSchema))
     return Object.assign(adapter, {bindings});
 }
 
 // TODO Check for impossible assertions for example, waiting for an amount parameter to be bound by a boolean type even though the protocol event schema defines it as a number
 export function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>(
-    currBindings: A,
+    adapter: A,
     satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
 ): Promise<A & Adapter<BA>> {
     throw new Error('Not Implemented');
@@ -39,3 +39,7 @@ export function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>
 export function custom<T>(value?: T): T {
     return <T>value;
 }
+
+export const number = <T extends number>(value?: T): T => custom<T>();
+export const string = <T extends string>(value?: T): T => custom<T>();
+export const object = <T extends object>(value?: T): T => custom<T>();
