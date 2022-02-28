@@ -1,8 +1,9 @@
 import {Adapter} from "./adapter";
 import {MessagePayload, ParamBindings} from "./binding_assertion";
-import {AgentEndpoint, MessageInfrastructure} from "./message_infrastructure";
+import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "./message_infrastructure";
 import {AgentIrl, decomposeIrl, MessageSchema, Role, RoleBindings} from "./protocol";
 import {Request, Response} from "express";
+import {containsProperties, filterProperties, minus} from "../utils";
 
 const express = require('express');
 const http = require('http');
@@ -14,21 +15,47 @@ async function httpsPost({body, host, port, ...options}) {
     return res;
 }
 
-export class DefaultAdapter<B extends ParamBindings> implements Adapter<B> {
+export class DefaultAdapter<B extends ParamBindings> implements Adapter<B>, IncomingMessageListener {
     bindings: B;
     messageInfrastructure: MessageInfrastructure;
     roleBindings: RoleBindings;
+    private readonly bindingListeners: { requiredParamNames: string[], callback: (newBindings: ParamBindings) => void }[];
 
     constructor(messageInfrastructure: MessageInfrastructure, roleBindings: RoleBindings, bindings: B) {
         this.bindings = bindings;
         this.messageInfrastructure = messageInfrastructure;
         this.roleBindings = roleBindings;
+        this.messageInfrastructure.addMessageReceivedListener(this);
+        this.bindingListeners = [];
+    }
+
+    async getBinding<PA extends ParamBindings>(satisfiableEvent: PA): Promise<PA> {
+        return new Promise(resolve => {
+            this.bindingListeners.push({
+                requiredParamNames: Object.keys(satisfiableEvent),
+                callback: <(p: PA) => void>resolve
+            });
+        });
+    }
+
+    onNewBindings(newBindings: ParamBindings) {
+        Object.assign(this.bindings, newBindings);
+        for (let {requiredParamNames, callback} of this.bindingListeners)
+            if (containsProperties(this.bindings, requiredParamNames))
+                return callback(filterProperties(this.bindings, requiredParamNames));
+    }
+
+    onIncomingMessage(message: ParamBindings): void {
+        const newBindings = minus(message, this.bindings);
+        if (Object.keys(newBindings).length > 0)
+            this.onNewBindings(newBindings);
     }
 }
 
 export class MockMessageInfrastructure implements MessageInfrastructure {
     private registeredAgents: { [roleName: Role['name']]: AgentEndpoint } = {};
     private server;
+    private incomingMessageListeners: IncomingMessageListener[] = [];
 
     static async newAndReady(port: number): Promise<MockMessageInfrastructure> {
         return new Promise(resolve => new MockMessageInfrastructure(port, infra => {
@@ -58,6 +85,8 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     incomingRequestListener(req: Request, res: Response): void {
         console.log(`Received message: ${JSON.stringify(req.body)}`);
         res.send(true);
+        for (let listener of this.incomingMessageListeners)
+            listener.onIncomingMessage(req.body);
     }
 
     async registerAgentEndpoint(role: Role, agentIrl: AgentIrl): Promise<boolean> {
@@ -79,5 +108,9 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
             });
         }
         return payload;
+    }
+
+    addMessageReceivedListener(callback: IncomingMessageListener) {
+        this.incomingMessageListeners.push(callback);
     }
 }

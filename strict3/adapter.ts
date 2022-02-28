@@ -1,8 +1,12 @@
 import {AssertedBinding, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
 import {MessageInfrastructure} from "./message_infrastructure";
 import {MessageSchema, RoleBindings} from "./protocol";
+import {minus} from "../utils";
 
 export interface Adapter<B extends ParamBindings> {
+    onNewBindings<PB extends ParamBindings>(newBindings: PB);
+    getBinding<PB extends ParamBindings>(satisfiableEvent: PB): Promise<PB>;
+
     bindings: B;
     roleBindings: RoleBindings;
     messageInfrastructure: MessageInfrastructure;
@@ -23,18 +27,21 @@ export async function send<A extends Adapter<ParamBindings>, M extends MessageSc
     messageSchema: M,
     message: O
 ): Promise<A & Adapter<O>> {
-    const bindings = Object.assign(adapter.bindings, message);
-    await adapter.messageInfrastructure.send(messageSchema.toRoles.map(({name}) => adapter.roleBindings[name]), extractMessageBindings(bindings, messageSchema))
+    const newBindings = minus(message, adapter.bindings);
+    const bindings = Object.assign(adapter.bindings, newBindings);
+    await adapter.messageInfrastructure.send(messageSchema.toRoles.map(({name}) => adapter.roleBindings[name]), extractMessageBindings(bindings, messageSchema));
+    if(Object.keys(newBindings).length > 0)
+        adapter.onNewBindings(newBindings);
     return Object.assign(adapter, {bindings});
 }
 
 // TODO Check for impossible assertions for example, waiting for an amount parameter to be bound by a boolean type even though the protocol event schema defines it as a number
-export function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>(
+export async function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>(
     adapter: A,
     satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
 ): Promise<A & Adapter<BA>> {
-    console.error('Not Implemented');
-    // throw new Error();
+    await adapter.getBinding(satisfiableEvent)
+    console.log(`Event satisfied: ${JSON.stringify(Object.keys(satisfiableEvent))}`);
     return <any>adapter;
 }
 
