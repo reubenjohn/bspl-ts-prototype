@@ -30,7 +30,14 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     private registeredAgents: { [roleName: Role['name']]: AgentEndpoint } = {};
     private server;
 
-    constructor(port: number) {
+    static async newAndReady(port: number): Promise<MockMessageInfrastructure> {
+        return new Promise(resolve => new MockMessageInfrastructure(port, infra => {
+            console.log(`Example app listening on port ${port}!`);
+            resolve(infra);
+        }));
+    }
+
+    constructor(port: number, onReady?: (infra: MockMessageInfrastructure) => void) {
         this.incomingRequestListener = this.incomingRequestListener.bind(this);
 
         const app = express();
@@ -41,7 +48,7 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
         // Set your routes
         app.post('/', this.incomingRequestListener);
 
-        this.server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+        this.server = app.listen(port, () => onReady && onReady(this));
     }
 
     close() {
