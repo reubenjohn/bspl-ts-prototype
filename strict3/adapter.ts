@@ -33,7 +33,9 @@ export function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>
     adapter: A,
     satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
 ): Promise<A & Adapter<BA>> {
-    throw new Error('Not Implemented');
+    console.error('Not Implemented');
+    // throw new Error();
+    return <any>adapter;
 }
 
 export function custom<T>(value?: T): T {

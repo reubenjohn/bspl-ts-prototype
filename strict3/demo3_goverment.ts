@@ -1,22 +1,22 @@
 import {AssertedBinding} from "./binding_assertion";
-import {Adapter, custom, number, send, when} from "./adapter";
-import {DefaultAdapter, MockMessageInfrastructure} from "./mock_infrastructure";
+import {Adapter, number, send, when} from "./adapter";
+import {DefaultAdapter} from "./mock_infrastructure";
 import {staticRoleBinding} from "./demo3_common";
 import {AcceptMessageSchema, OfferMessageSchema} from "./demo_protocol";
-import {decomposeIrl} from "./protocol";
+import {MessageInfrastructure} from "./message_infrastructure";
 
 type STest1 = AssertedBinding<{ p1: '' }, { bound: { p1: '' }, unbound: {} }>;
 type STest2 = AssertedBinding<{ p1: '', p2: '' }, { bound: { p1: '' }, unbound: { p3: '' } }>;
 type STest3 = AssertedBinding<{ p1: '', p3: '' }, { bound: { p1: '' }, unbound: { p3: '' } }>;
 
-export async function main_government() {
+export async function main_government(messageInfrastructure1: MessageInfrastructure) {
 
     // TODO Give first class meaning to keys
     // TODO Fluent API
     // TODO A single primitive sendWhen
     // Tango for computing concise state machines
     let enactmentState0 = new DefaultAdapter<{}>(
-        new MockMessageInfrastructure(decomposeIrl(staticRoleBinding["Government"]).port), staticRoleBinding,
+        messageInfrastructure1, staticRoleBinding,
         {});
 
     // Can we do something like enactment0.sendOfferMessage where the IDE

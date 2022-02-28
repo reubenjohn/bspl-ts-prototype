@@ -2,11 +2,17 @@ import {Adapter} from "./adapter";
 import {MessagePayload, ParamBindings} from "./binding_assertion";
 import {AgentEndpoint, MessageInfrastructure} from "./message_infrastructure";
 import {AgentIrl, decomposeIrl, MessageSchema, Role, RoleBindings} from "./protocol";
-import {Server} from "http";
 import {Request, Response} from "express";
 
 const express = require('express');
 const http = require('http');
+const axios = require('axios');
+
+
+async function httpsPost({body, host, port, ...options}) {
+    const res = await axios.post(`http://${host}:${port}`, body);
+    return res;
+}
 
 export class DefaultAdapter<B extends ParamBindings> implements Adapter<B> {
     bindings: B;
@@ -22,6 +28,7 @@ export class DefaultAdapter<B extends ParamBindings> implements Adapter<B> {
 
 export class MockMessageInfrastructure implements MessageInfrastructure {
     private registeredAgents: { [roleName: Role['name']]: AgentEndpoint } = {};
+    private server;
 
     constructor(port: number) {
         this.incomingRequestListener = this.incomingRequestListener.bind(this);
@@ -34,11 +41,15 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
         // Set your routes
         app.post('/', this.incomingRequestListener);
 
-        app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+        this.server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+    }
 
+    close() {
+        this.server.close();
     }
 
     incomingRequestListener(req: Request, res: Response): void {
+        console.log(`Received message: ${JSON.stringify(req.body)}`);
         res.send(true);
     }
 
@@ -52,22 +63,14 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     async send<M extends MessageSchema>(toIRLs: AgentIrl[], payload: MessagePayload<M>): Promise<MessagePayload<M>> {
         for (let irl of toIRLs) {
             const {host, port} = decomposeIrl(irl);
-            const req = http.request({
+            console.log(`Sending message to '${irl}': ${JSON.stringify(payload)}`);
+            await httpsPost({
                 host,
                 port,
-                method: 'POST'
-            }, (res) => {
-                res.resume();
-                res.on('end', () => {
-                    if (!res.complete)
-                        console.error(
-                            'The connection was terminated while the message was still being sent');
-                });
+                method: 'POST',
+                body: payload
             });
-
-            req.write(JSON.stringify(payload));
-            req.end();
         }
-        return new Promise(res => res(payload));
+        return payload;
     }
 }

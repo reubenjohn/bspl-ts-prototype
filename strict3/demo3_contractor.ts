@@ -1,13 +1,12 @@
-import {AssertedBinding} from "./binding_assertion";
-import {Adapter, custom, number, send, string, when} from "./adapter";
-import {DefaultAdapter, MockMessageInfrastructure} from "./mock_infrastructure";
+import {Adapter, number, send, string, when} from "./adapter";
+import {DefaultAdapter} from "./mock_infrastructure";
 import {staticRoleBinding} from "./demo3_common";
-import {AcceptMessageSchema, BidMessageSchema, OfferMessageSchema} from "./demo_protocol";
-import {decomposeIrl} from "./protocol";
+import {BidMessageSchema} from "./demo_protocol";
+import {MessageInfrastructure} from "./message_infrastructure";
 
-export async function main_contractor() {
+export async function main_contractor(mockMessageInfrastructure: MessageInfrastructure) {
     let enactmentState0 = new DefaultAdapter<{}>(
-        new MockMessageInfrastructure(decomposeIrl(staticRoleBinding["Contractor"]).port), staticRoleBinding,
+        mockMessageInfrastructure, staticRoleBinding,
         {});
 
     let enactmentState1: Adapter<{
