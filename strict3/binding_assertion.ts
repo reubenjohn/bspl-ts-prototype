@@ -29,5 +29,4 @@ export type MessagePreBindingAssertions<M extends MessageSchema> =
 export type MessagePostBindingAssertions<M extends MessageSchema> =
     BindingAssertions
     & { bound: M['inParams'] & M['outParams'] };
-export type AssertedBinding<B extends BA['bound'], BA extends BindingAssertions> = Exclude<B, BA['unbound']>;
-export type AssertedBinding2<BA extends BindingAssertions> = Exclude<BA['bound'], BA['unbound']>;
+export type AssertedBinding<BA extends BindingAssertions> = Exclude<BA['bound'], BA['unbound']>;

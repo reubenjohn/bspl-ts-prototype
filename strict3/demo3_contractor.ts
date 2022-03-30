@@ -11,10 +11,9 @@ export async function main_contractor(mockMessageInfrastructure: MessageInfrastr
 
     let enactmentState1: Adapter<{
         contractID: number,
-        bidID: number,
         spec: string
-    }> = await when(enactmentState0, {contractID: number(), bidID: number(), spec: string()});
+    }> = await when(enactmentState0, {contractID: number(), spec: string()});
 
     let enactmentState3: typeof enactmentState1 & Adapter<{ amount: number }> = await send(enactmentState1, BidMessageSchema,
-        {amount: 100});
+        {bidID: 1, amount: 100});
 }

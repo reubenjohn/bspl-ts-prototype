@@ -4,8 +4,8 @@ Contracting {
   private out accepted, out rejected
 
   // TODO Remove second key
-  Government -> Contractor: Offer[out contractID key, out bidID key, out spec]
-  Contractor -> Government: Bid[in contractID key, in bidID key, in spec, out amount]
+  Government -> Contractor: Offer[out contractID key, out spec]
+  Contractor -> Government: Bid[in contractID key, out bidID key, in spec, out amount]
   Government -> Contractor: Accept[in contractID key, in bidID key, in amount, out accepted, out closed]
   Government -> Contractor: Reject[in contractID key, in bidID key, in amount, out rejected, out closed]
 }
