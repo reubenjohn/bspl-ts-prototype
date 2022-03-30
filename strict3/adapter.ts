@@ -1,4 +1,4 @@
-import {AssertedBinding, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
+import {AssertedBinding2, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
 import {MessageInfrastructure} from "./message_infrastructure";
 import {MessageSchema, RoleBindings} from "./protocol";
 import {minus} from "../utils";
@@ -22,8 +22,11 @@ function extractMessageBindings<M extends MessageSchema>(bindings: ParamBindings
     return payload;
 }
 
-export async function send<A extends Adapter<ParamBindings>, M extends MessageSchema, O extends M['outParams']>(
-    adapter: A & Adapter<AssertedBinding<A['bindings'], MessagePreBindingAssertions<M>>>,
+export async function send<
+    A extends Adapter<AssertedBinding2<MessagePreBindingAssertions<M>>>,
+    M extends MessageSchema,
+    O extends M['outParams']>(
+    adapter: A,
     messageSchema: M,
     message: O
 ): Promise<A & Adapter<O>> {

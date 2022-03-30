@@ -15,8 +15,8 @@ const ContractingBsplJson: BsplProtocolJson = {
         "contractID",
         "bidID"
     ],
-    "ins": [],
-    "outs": [
+    "inParams": [],
+    "outParams": [
         "spec",
         "closed",
         "bidID",
@@ -41,8 +41,8 @@ const ContractingBsplJson: BsplProtocolJson = {
                 "contractID",
                 "bidID"
             ],
-            "ins": [],
-            "outs": [
+            "inParams": [],
+            "outParams": [
                 "contractID",
                 "spec",
                 "bidID"
@@ -68,12 +68,12 @@ const ContractingBsplJson: BsplProtocolJson = {
                 "contractID",
                 "bidID"
             ],
-            "ins": [
+            "inParams": [
                 "contractID",
                 "spec",
                 "bidID"
             ],
-            "outs": [
+            "outParams": [
                 "amount"
             ],
             "nils": [],
@@ -98,12 +98,12 @@ const ContractingBsplJson: BsplProtocolJson = {
                 "contractID",
                 "bidID"
             ],
-            "ins": [
+            "inParams": [
                 "contractID",
                 "amount",
                 "bidID"
             ],
-            "outs": [
+            "outParams": [
                 "closed",
                 "accepted"
             ],
@@ -129,12 +129,12 @@ const ContractingBsplJson: BsplProtocolJson = {
                 "contractID",
                 "bidID"
             ],
-            "ins": [
+            "inParams": [
                 "contractID",
                 "amount",
                 "bidID"
             ],
-            "outs": [
+            "outParams": [
                 "rejected",
                 "closed"
             ],

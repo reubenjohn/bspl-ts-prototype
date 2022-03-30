@@ -6,8 +6,8 @@ export interface MessageSchemaJson {
     "type": "message",
     "parameters": ParameterName[],
     "keys": ParameterName[],
-    "ins": ParameterName[],
-    "outs": ParameterName[],
+    "inParams": ParameterName[],
+    "outParams": ParameterName[],
     "nils": [],
     "roles": RoleName[],
     "to": RoleName,
@@ -19,9 +19,9 @@ export interface BsplProtocolJson {
     "type": "protocol",
     "parameters": ParameterName[],
     "keys": ParameterName[],
-    "ins": ParameterName[],
-    "outs": ParameterName[],
+    "inParams": ParameterName[],
+    "outParams": ParameterName[],
     "nils": ParameterName[],
     "roles": RoleName[],
-    "messages": { [key: string]: MessageSchemaJson }
+    "messages": { [signature: string]: MessageSchemaJson }
 }

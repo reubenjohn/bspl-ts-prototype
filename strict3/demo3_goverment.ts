@@ -20,7 +20,8 @@ export async function main_government(messageInfrastructure1: MessageInfrastruct
         {});
 
     // Can we do something like enactment0.sendOfferMessage where the IDE
-    let enactmentState1 = await send<typeof enactmentState0, OfferMessageSchema, { contractID: 1, bidID: 1, spec: 'build bridge' }>(enactmentState0, OfferMessageSchema, {
+    let enactmentState1 = await send<typeof enactmentState0, OfferMessageSchema, { contractID: 1, bidID: 1, spec: 'build bridge' }>(
+        enactmentState0, OfferMessageSchema, {
         contractID: 1,
         bidID: 1,
         spec: 'build bridge'

@@ -1,6 +1,6 @@
 import {MessageSchema, Role} from "./protocol";
 import {Bound} from "./binding_assertion";
-import {number} from "./adapter";
+import {number, string} from "./adapter";
 
 export interface OfferMessageSchema extends MessageSchema {
     name: 'Offer',
@@ -18,7 +18,7 @@ export const OfferMessageSchema: MessageSchema & OfferMessageSchema = {
 
 export interface BidMessageSchema extends MessageSchema {
     name: 'Bid';
-    inParams: { contractID: number, bidID: number, spec: 'build bridge' },
+    inParams: { contractID: number, bidID: number, spec: string },
     outParams: { amount: number }
     fromRole: typeof ContractorRole;
     toRoles: [typeof GovernmentRole];
@@ -26,7 +26,7 @@ export interface BidMessageSchema extends MessageSchema {
 
 export const BidMessageSchema: BidMessageSchema = {
     name: 'Bid',
-    inParams: {contractID: number(), bidID: number(), spec: 'build bridge'},
+    inParams: {contractID: number(), bidID: number(), spec: string()},
     outParams: {amount: number()},
     fromRole: ContractorRole,
     toRoles: [GovernmentRole],

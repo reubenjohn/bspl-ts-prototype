@@ -3,6 +3,7 @@ Contracting {
   parameters out contractID key, out bidID key, out spec, out amount, out closed
   private out accepted, out rejected
 
+  // TODO Remove second key
   Government -> Contractor: Offer[out contractID key, out bidID key, out spec]
   Contractor -> Government: Bid[in contractID key, in bidID key, in spec, out amount]
   Government -> Contractor: Accept[in contractID key, in bidID key, in amount, out accepted, out closed]
