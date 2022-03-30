@@ -14,10 +14,13 @@ export interface RoleBindings {
     [roleName: Role['name']]: AgentIrl;
 }
 
-export interface MessageSchema {
+export interface MessageSchemaIO<IN extends ParamBindings, OUT extends ParamBindings> {
     name: string;
-    inParams: ParamBindings;
-    outParams: ParamBindings;
+    inParams: IN;
+    outParams: OUT;
     fromRole: Role;
     toRoles: Role[];
+}
+
+export interface MessageSchema extends MessageSchemaIO<ParamBindings, ParamBindings> {
 }

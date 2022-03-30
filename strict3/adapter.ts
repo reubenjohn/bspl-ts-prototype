@@ -3,13 +3,12 @@ import {MessageInfrastructure} from "./message_infrastructure";
 import {MessageSchema, RoleBindings} from "./protocol";
 import {minus} from "../utils";
 
-export interface Adapter<B extends ParamBindings> {
-    onNewBindings<PB extends ParamBindings>(newBindings: PB);
-    getBinding<PB extends ParamBindings>(satisfiableEvent: PB): Promise<PB>;
 
-    bindings: B;
+export interface Adapter {
     roleBindings: RoleBindings;
     messageInfrastructure: MessageInfrastructure;
+
+    newEnactment() : Enactment<{}>;
 }
 
 function extractMessageBindings<M extends MessageSchema>(bindings: ParamBindings & MessagePayload<M>, messageSchema: M): MessagePayload<M> {
@@ -22,30 +21,40 @@ function extractMessageBindings<M extends MessageSchema>(bindings: ParamBindings
     return payload;
 }
 
+export interface Enactment<PB extends ParamBindings> {
+    bindings: PB;
+    adapter: Adapter;
+
+    onNewBindings<PB extends ParamBindings>(newBindings: PB);
+    getBinding<PB extends ParamBindings>(satisfiableEvent: PB): Promise<PB>;
+}
+
 export async function send<
-    A extends Adapter<AssertedBinding<MessagePreBindingAssertions<M>>>,
+    E extends Enactment<AssertedBinding<MessagePreBindingAssertions<M>>>,
     M extends MessageSchema,
     O extends M['outParams']>(
-    adapter: A,
+    enactment: E,
     messageSchema: M,
     message: O
-): Promise<A & Adapter<O>> {
-    const newBindings = minus(message, adapter.bindings);
-    const bindings = Object.assign(adapter.bindings, newBindings);
-    await adapter.messageInfrastructure.send(messageSchema.toRoles.map(({name}) => adapter.roleBindings[name]), extractMessageBindings(bindings, messageSchema));
+): Promise<E & Enactment<O>> {
+    const adapter = enactment.adapter;
+    const newBindings = minus(message, enactment.bindings);
+    const bindings = Object.assign(enactment.bindings, newBindings);
+    const toIRLs = messageSchema.toRoles.map(({name}) => adapter.roleBindings[name]);
+    await adapter.messageInfrastructure.send(toIRLs, extractMessageBindings(bindings, messageSchema));
     if(Object.keys(newBindings).length > 0)
-        adapter.onNewBindings(newBindings);
-    return Object.assign(adapter, {bindings});
+        enactment.onNewBindings(newBindings);
+    return Object.assign(enactment, {bindings});
 }
 
 // TODO Check for impossible assertions for example, waiting for an amount parameter to be bound by a boolean type even though the protocol event schema defines it as a number
-export async function when<A extends Adapter<ParamBindings>, BA extends ParamBindings>(
-    adapter: A,
+export async function when<E extends Enactment<ParamBindings>, BA extends ParamBindings>(
+    enactment: E,
     satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
-): Promise<A & Adapter<BA>> {
-    await adapter.getBinding(satisfiableEvent)
+): Promise<E & Enactment<BA>> {
+    await enactment.getBinding(satisfiableEvent)
     console.log(`Event satisfied: ${JSON.stringify(Object.keys(satisfiableEvent))}`);
-    return <any>adapter;
+    return <any>enactment;
 }
 
 export function custom<T>(value?: T): T {

@@ -1,7 +1,7 @@
-import {Adapter} from "./adapter";
-import {MessagePayload, ParamBindings} from "./binding_assertion";
+import {Adapter, Enactment, send} from "./adapter";
+import {AssertedBinding, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
 import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "./message_infrastructure";
-import {AgentIrl, decomposeIrl, MessageSchema, Role, RoleBindings} from "./protocol";
+import {AgentIrl, decomposeIrl, MessageSchema, MessageSchemaIO, Role, RoleBindings} from "./protocol";
 import {Request, Response} from "express";
 import {containsProperties, filterProperties, minus} from "../utils";
 
@@ -15,18 +15,30 @@ async function httpsPost({body, host, port, ...options}) {
     return res;
 }
 
-export class DefaultAdapter<B extends ParamBindings> implements Adapter<B>, IncomingMessageListener {
-    bindings: B;
+export class InMemoryAdapter implements Adapter {
     messageInfrastructure: MessageInfrastructure;
     roleBindings: RoleBindings;
-    private readonly bindingListeners: { requiredParamNames: string[], callback: (newBindings: ParamBindings) => void }[];
 
-    constructor(messageInfrastructure: MessageInfrastructure, roleBindings: RoleBindings, bindings: B) {
-        this.bindings = bindings;
+    constructor(messageInfrastructure: MessageInfrastructure, roleBindings: RoleBindings) {
         this.messageInfrastructure = messageInfrastructure;
         this.roleBindings = roleBindings;
-        this.messageInfrastructure.addMessageReceivedListener(this);
+    }
+
+    newEnactment(): Enactment<{}> {
+        return new InMemoryEnactment<{}>(this, {});
+    }
+}
+
+export class InMemoryEnactment<PB extends ParamBindings> implements Enactment<PB>, IncomingMessageListener {
+    adapter: Adapter;
+    bindings: PB;
+    private readonly bindingListeners: { requiredParamNames: string[], callback: (newBindings: ParamBindings) => void }[];
+
+    constructor(adapter: Adapter, bindings: PB) {
+        this.adapter = adapter;
+        this.bindings = bindings;
         this.bindingListeners = [];
+        this.adapter.messageInfrastructure.addMessageReceivedListener(this);
     }
 
     async getBinding<PA extends ParamBindings>(satisfiableEvent: PA): Promise<PA> {
