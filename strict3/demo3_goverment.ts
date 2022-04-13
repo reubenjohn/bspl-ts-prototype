@@ -13,7 +13,9 @@ import {
 import {MessageInfrastructure} from "./message_infrastructure";
 import {MessageBindings} from "./protocol";
 
-async function negotiateOffer(enactment: ContractingEnactment<OfferMessageSchema['outParams']>, budget: number) {
+async function negotiateOffer(
+    enactment: ContractingEnactment<MessageBindings<OfferMessageSchema>>,
+    budget: number) {
     let bidEnactment: ContractingEnactment<MessageBindings<BidMessageSchema>>;
     while ((bidEnactment = (await when(newEnactment(enactment), {
         bidID: number(),
@@ -24,7 +26,8 @@ async function negotiateOffer(enactment: ContractingEnactment<OfferMessageSchema
 }
 
 export async function main_government(messageInfrastructure1: MessageInfrastructure) {
-    let adapter = new InMemoryAdapter<ContractingProtocolType>(ContractingProtocol, messageInfrastructure1, staticRoleBinding, "Government");
+    let adapter = new InMemoryAdapter<ContractingProtocolType>(
+        ContractingProtocol, messageInfrastructure1, staticRoleBinding, "Government");
 
     await adapter.newEnactment()
         .send(OfferMessageSchema, {contractID: 1, spec: 'build bridge'})

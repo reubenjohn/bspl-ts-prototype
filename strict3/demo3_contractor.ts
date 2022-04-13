@@ -5,18 +5,22 @@ import {BidMessageSchema, ContractingEnactment, ContractingProtocol, Contracting
 import {MessageInfrastructure} from "./message_infrastructure";
 
 export async function main_contractor(mockMessageInfrastructure: MessageInfrastructure) {
-    let adapter = new InMemoryAdapter<ContractingProtocolType>(ContractingProtocol, mockMessageInfrastructure, staticRoleBinding, "Contractor");
+    let adapter = new InMemoryAdapter<ContractingProtocolType>(
+        ContractingProtocol, mockMessageInfrastructure, staticRoleBinding, "Contractor");
 
     const enactment = adapter.newEnactment();
     await when(enactment, {contractID: number(), spec: string()})
-        .then(enactment => proposeAndNegotiateBid(1, 300, enactment));
+        .then(enactment => proposeAndNegotiateBid(enactment, 1, 300));
 }
 
-async function proposeAndNegotiateBid(bidID: number, amount: number, enactment: ContractingEnactment<BidMessageSchema['inParams']>) {
+async function proposeAndNegotiateBid(
+    enactment: ContractingEnactment<BidMessageSchema['inParams']>,
+    bidID: number, amount: number
+) {
     return await send(newEnactment(enactment), BidMessageSchema, {bidID, amount})
         .then(async bidEnactment => {
-            if ((await when(bidEnactment, {closed: boolean()})).bindings.hasOwnProperty('accepted'))
+            if ("accepted" in (await when(bidEnactment, {closed: boolean()})).bindings)
                 return bidEnactment;
-            else return await proposeAndNegotiateBid(bidID + 1, amount - 100, enactment);
+            else return await proposeAndNegotiateBid(enactment, bidID + 1, amount - 100);
         });
 }
