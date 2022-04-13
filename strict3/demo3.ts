@@ -6,8 +6,8 @@ import {staticRoleBinding} from "./demo3_common";
 
 (async () => {
     console.log('Starting demo3');
-    const governmentMessageInfrastructure = await MockMessageInfrastructure.newAndReady(decomposeIrl(staticRoleBinding["Government"]).port);
-    const contractorMessageInfrastructure = await MockMessageInfrastructure.newAndReady(decomposeIrl(staticRoleBinding["Contractor"]).port);
+    const governmentMessageInfrastructure = await MockMessageInfrastructure.newAndReady("Government", decomposeIrl(staticRoleBinding["Government"]).port);
+    const contractorMessageInfrastructure = await MockMessageInfrastructure.newAndReady("Contractor", decomposeIrl(staticRoleBinding["Contractor"]).port);
     await Promise.all([
         main_government(governmentMessageInfrastructure),
         main_contractor(contractorMessageInfrastructure)

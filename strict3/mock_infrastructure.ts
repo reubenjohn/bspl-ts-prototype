@@ -1,7 +1,7 @@
-import {Adapter, Enactment, send} from "./adapter";
-import {AssertedBinding, MessagePayload, MessagePreBindingAssertions, ParamBindings} from "./binding_assertion";
+import {Adapter, Enactment} from "./adapter";
+import {MessagePayload, ParamBindings} from "./binding_assertion";
 import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "./message_infrastructure";
-import {AgentIrl, decomposeIrl, MessageSchema, MessageSchemaIO, Role, RoleBindings} from "./protocol";
+import {AgentIrl, decomposeIrl, MessageSchema, Protocol, Role, RoleBindings} from "./protocol";
 import {Request, Response} from "express";
 import {containsProperties, filterProperties, minus} from "../utils";
 
@@ -15,52 +15,119 @@ async function httpsPost({body, host, port, ...options}) {
     return res;
 }
 
-export class InMemoryAdapter implements Adapter {
-    messageInfrastructure: MessageInfrastructure;
-    roleBindings: RoleBindings;
+export interface EventQuery {
+    isSatisfied: (event: any) => boolean;
+}
 
-    constructor(messageInfrastructure: MessageInfrastructure, roleBindings: RoleBindings) {
-        this.messageInfrastructure = messageInfrastructure;
-        this.roleBindings = roleBindings;
+export class ParamBindingSatisfiedEventQuery implements EventQuery {
+    constructor(public readonly paramBindings: ParamBindings) {
     }
 
-    newEnactment(): Enactment<{}> {
-        return new InMemoryEnactment<{}>(this, {});
+    isSatisfied(event: ParamBindings) {
+        for (let key in this.paramBindings) {
+            if (!event.hasOwnProperty(key))
+                return false;
+            if (this.paramBindings[key] !== null && this.paramBindings[key] !== event[key])
+                return false;
+        }
+        return true;
     }
 }
 
-export class InMemoryEnactment<PB extends ParamBindings> implements Enactment<PB>, IncomingMessageListener {
-    adapter: Adapter;
-    bindings: PB;
-    private readonly bindingListeners: { requiredParamNames: string[], callback: (newBindings: ParamBindings) => void }[];
+export function paramBindingsSatisfied(params: ParamBindings): EventQuery {
+    return new ParamBindingSatisfiedEventQuery(params);
+}
 
-    constructor(adapter: Adapter, bindings: PB) {
-        this.adapter = adapter;
-        this.bindings = bindings;
-        this.bindingListeners = [];
-        this.adapter.messageInfrastructure.addMessageReceivedListener(this);
+export interface EventListener {
+    onlyTriggerOnce: boolean;
+    eventQuery: EventQuery,
+    callback: (newBindings: ParamBindings) => void
+}
+
+export class InMemoryAdapter<P extends Protocol> implements Adapter<P>, IncomingMessageListener {
+    protocol: P;
+    messageInfrastructure: MessageInfrastructure;
+    roleBindings: RoleBindings;
+    readonly bindingListeners = new Set<EventListener>();
+    private eventQueue = new Set<ParamBindings>();
+
+
+    constructor(protocol: P, messageInfrastructure: MessageInfrastructure, roleBindings: RoleBindings, public readonly roleName: Role['name']) {
+        this.protocol = protocol;
+        this.messageInfrastructure = messageInfrastructure;
+        this.roleBindings = roleBindings;
+        this.messageInfrastructure.addMessageReceivedListener(this);
     }
 
-    async getBinding<PA extends ParamBindings>(satisfiableEvent: PA): Promise<PA> {
+    newEnactment(): Enactment<P, {}> {
+        return new InMemoryEnactment<P, {}>(this, {});
+    }
+
+    onIncomingMessage(message: ParamBindings): void {
+        this.notifyListeners(message);
+    }
+
+    notifyListeners(message: ParamBindings) {
+        this.log(`Found ${this.bindingListeners.size} pre-existing listeners: ${JSON.stringify(Array.from(this.bindingListeners))}`);
+        for(let it = this.bindingListeners.values(), next = it.next(); !next.done; next = it.next()) {
+            const listener = next.value;
+            if(this.tryNotifyListener(listener, message))
+                return;
+        }
+        this.eventQueue.add(message);
+    }
+
+    private tryNotifyListener(listener: EventListener, message: ParamBindings) {
+        if (listener.eventQuery.isSatisfied(message)) {
+            listener.callback(message);
+            this.eventQueue.delete(message);
+            if (listener.onlyTriggerOnce)
+                this.bindingListeners.delete(listener);
+            return true;
+        }
+        return false;
+    }
+
+    addEventListener(listener: EventListener): void {
+        this.log(`Found ${this.eventQueue.size} events already in queue: ${JSON.stringify(this.eventQueue)}`);
+        for(let it = this.eventQueue.values(), next = it.next(); !next.done; next = it.next()) {
+            const message = next.value;
+            if(this.tryNotifyListener(listener, message))
+                return;
+        }
+        this.bindingListeners.add(listener);
+    }
+
+    log(message: string): void {
+        console.log(`[${this.roleName}] ${message}`);
+    }
+}
+
+export class InMemoryEnactment<P extends Protocol, PB extends ParamBindings> implements Enactment<P, PB> {
+    adapter: Adapter<P>;
+    bindings: PB;
+    constructor(adapter: Adapter<P>, bindings: PB) {
+        this.adapter = adapter;
+        this.bindings = bindings;
+    }
+
+    // TODO Handle case where the event is already satisfied
+    async onParamBindingsSatisfied<PA extends ParamBindings>(satisfiableEvent: PA): Promise<PA> {
         return new Promise(resolve => {
-            this.bindingListeners.push({
-                requiredParamNames: Object.keys(satisfiableEvent),
-                callback: <(p: PA) => void>resolve
-            });
+            const listener: EventListener = {
+                onlyTriggerOnce: true,
+                eventQuery: paramBindingsSatisfied(satisfiableEvent),
+                callback: (p: PA) => {
+                    this.adapter.log(`Listener with query '${JSON.stringify(satisfiableEvent)}' satisfied by event '${JSON.stringify(p)}'`);
+                    resolve(p);
+                }
+            };
+            this.adapter.addEventListener(listener);
         });
     }
 
     onNewBindings(newBindings: ParamBindings) {
         Object.assign(this.bindings, newBindings);
-        for (let {requiredParamNames, callback} of this.bindingListeners)
-            if (containsProperties(this.bindings, requiredParamNames))
-                return callback(filterProperties(this.bindings, requiredParamNames));
-    }
-
-    onIncomingMessage(message: ParamBindings): void {
-        const newBindings = minus(message, this.bindings);
-        if (Object.keys(newBindings).length > 0)
-            this.onNewBindings(newBindings);
     }
 }
 
@@ -69,14 +136,14 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     private server;
     private incomingMessageListeners: IncomingMessageListener[] = [];
 
-    static async newAndReady(port: number): Promise<MockMessageInfrastructure> {
-        return new Promise(resolve => new MockMessageInfrastructure(port, infra => {
-            console.log(`Example app listening on port ${port}!`);
+    static async newAndReady(roleName: Role['name'], port: number): Promise<MockMessageInfrastructure> {
+        return new Promise(resolve => new MockMessageInfrastructure(roleName, port, infra => {
+            console.log(`[${roleName}] Agent listening on port ${port}!`);
             resolve(infra);
         }));
     }
 
-    constructor(port: number, onReady?: (infra: MockMessageInfrastructure) => void) {
+    constructor(private readonly roleName: Role['name'], private readonly port: number, onReady?: (infra: MockMessageInfrastructure) => void) {
         this.incomingRequestListener = this.incomingRequestListener.bind(this);
 
         const app = express();
@@ -95,7 +162,7 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     }
 
     incomingRequestListener(req: Request, res: Response): void {
-        console.log(`Received message: ${JSON.stringify(req.body)}`);
+        this.log(`Received message: ${JSON.stringify(req.body)}`);
         res.send(true);
         for (let listener of this.incomingMessageListeners)
             listener.onIncomingMessage(req.body);
@@ -111,7 +178,7 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
     async send<M extends MessageSchema>(toIRLs: AgentIrl[], payload: MessagePayload<M>): Promise<MessagePayload<M>> {
         for (let irl of toIRLs) {
             const {host, port} = decomposeIrl(irl);
-            console.log(`Sending message to '${irl}': ${JSON.stringify(payload)}`);
+            this.log(`Sending message ${JSON.stringify(payload)} to '${irl}'`);
             await httpsPost({
                 host,
                 port,
@@ -124,5 +191,9 @@ export class MockMessageInfrastructure implements MessageInfrastructure {
 
     addMessageReceivedListener(callback: IncomingMessageListener) {
         this.incomingMessageListeners.push(callback);
+    }
+
+    log(message: string): void {
+        console.log(`[${this.roleName}] ${message}`);
     }
 }

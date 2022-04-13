@@ -24,3 +24,10 @@ export interface MessageSchemaIO<IN extends ParamBindings, OUT extends ParamBind
 
 export interface MessageSchema extends MessageSchemaIO<ParamBindings, ParamBindings> {
 }
+
+export  interface Protocol {
+    name: string;
+    roles: Role[];
+    messages: MessageSchema[];  // TODO: Use key value pair based on unique message identifier
+    keyParamNames: ParamBindings;   // TODO: Use an array instead of a map to avoid redundancy?
+}
