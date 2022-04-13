@@ -1,6 +1,6 @@
 import {MessagePayload, ParamBindings} from "./binding_assertion";
 import {MessageInfrastructure} from "./message_infrastructure";
-import {MessageSchema, Protocol, Role, RoleBindings} from "./protocol";
+import {MessageSchema, MessageSchemaIO, Protocol, Role, RoleBindings} from "./protocol";
 import {minus} from "../utils";
 import {EventListener, InMemoryEnactment} from "./mock_infrastructure";
 
@@ -39,6 +39,15 @@ export interface Enactment<P extends Protocol, PB extends ParamBindings> {
     onNewBindings<PB extends ParamBindings>(newBindings: PB);
 
     onParamBindingsSatisfied<PB extends ParamBindings>(satisfiableEvent: PB): Promise<PB>;
+
+    send<O extends MessageSchema['outParams']>(
+        messageSchema: PB extends O ? never : MessageSchemaIO<PB, O>,
+        newBindings: O
+    ): Promise<Enactment<P, PB & O>>;
+
+    when<BA extends ParamBindings>(
+        satisfiableEvent: BA   //FIXME Prevent specifying parameters that are already bound
+    ): Promise<Enactment<P, PB & BA>>
 }
 
 export async function send<AS extends M['inParams'],
@@ -85,6 +94,6 @@ export const string = <T extends string>(value?: T): T => custom<T>();
 export const object = <T extends object>(value?: T): T => custom<T>();
 
 export function newEnactment<P extends Protocol,
-    PB extends ParamBindings>(adapter: Adapter<P>, bindings: PB extends P['keyParamNames'] ? never : PB): Enactment<P, PB> {
-    return new InMemoryEnactment<P, PB>(adapter, bindings);
+    PB extends ParamBindings>(enactment: Enactment<P, PB extends P['keyParamNames'] ? never : PB>): Enactment<P, PB> {
+    return new InMemoryEnactment<P, PB>(enactment.adapter, {...enactment.bindings});
 }

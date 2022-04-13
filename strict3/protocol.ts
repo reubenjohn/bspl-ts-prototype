@@ -25,6 +25,8 @@ export interface MessageSchemaIO<IN extends ParamBindings, OUT extends ParamBind
 export interface MessageSchema extends MessageSchemaIO<ParamBindings, ParamBindings> {
 }
 
+export type MessageBindings<M extends MessageSchema> = M['inParams'] & M['outParams'];
+
 export  interface Protocol {
     name: string;
     roles: Role[];

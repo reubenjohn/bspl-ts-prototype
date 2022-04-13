@@ -1,9 +1,8 @@
-import {Adapter, Enactment} from "./adapter";
+import {Adapter, Enactment, send, when} from "./adapter";
 import {MessagePayload, ParamBindings} from "./binding_assertion";
 import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "./message_infrastructure";
-import {AgentIrl, decomposeIrl, MessageSchema, Protocol, Role, RoleBindings} from "./protocol";
+import {AgentIrl, decomposeIrl, MessageSchema, MessageSchemaIO, Protocol, Role, RoleBindings} from "./protocol";
 import {Request, Response} from "express";
-import {containsProperties, filterProperties, minus} from "../utils";
 
 const express = require('express');
 const http = require('http');
@@ -69,9 +68,9 @@ export class InMemoryAdapter<P extends Protocol> implements Adapter<P>, Incoming
 
     notifyListeners(message: ParamBindings) {
         this.log(`Found ${this.bindingListeners.size} pre-existing listeners: ${JSON.stringify(Array.from(this.bindingListeners))}`);
-        for(let it = this.bindingListeners.values(), next = it.next(); !next.done; next = it.next()) {
+        for (let it = this.bindingListeners.values(), next = it.next(); !next.done; next = it.next()) {
             const listener = next.value;
-            if(this.tryNotifyListener(listener, message))
+            if (this.tryNotifyListener(listener, message))
                 return;
         }
         this.eventQueue.add(message);
@@ -89,10 +88,10 @@ export class InMemoryAdapter<P extends Protocol> implements Adapter<P>, Incoming
     }
 
     addEventListener(listener: EventListener): void {
-        this.log(`Found ${this.eventQueue.size} events already in queue: ${JSON.stringify(this.eventQueue)}`);
-        for(let it = this.eventQueue.values(), next = it.next(); !next.done; next = it.next()) {
+        this.log(`Found ${this.eventQueue.size} events already in queue: ${JSON.stringify(Array.from(this.eventQueue))}`);
+        for (let it = this.eventQueue.values(), next = it.next(); !next.done; next = it.next()) {
             const message = next.value;
-            if(this.tryNotifyListener(listener, message))
+            if (this.tryNotifyListener(listener, message))
                 return;
         }
         this.bindingListeners.add(listener);
@@ -106,6 +105,7 @@ export class InMemoryAdapter<P extends Protocol> implements Adapter<P>, Incoming
 export class InMemoryEnactment<P extends Protocol, PB extends ParamBindings> implements Enactment<P, PB> {
     adapter: Adapter<P>;
     bindings: PB;
+
     constructor(adapter: Adapter<P>, bindings: PB) {
         this.adapter = adapter;
         this.bindings = bindings;
@@ -128,6 +128,20 @@ export class InMemoryEnactment<P extends Protocol, PB extends ParamBindings> imp
 
     onNewBindings(newBindings: ParamBindings) {
         Object.assign(this.bindings, newBindings);
+    }
+
+    send<P extends Protocol,
+        O extends MessageSchema["outParams"]>(
+        messageSchema: PB extends O ? never : MessageSchemaIO<PB, O>,
+        newBindings: O
+    ): Promise<Enactment<P, PB & O>> {
+        // FIXME <any> cast of enactment
+        return send<PB, P, typeof messageSchema>(<any>this, messageSchema, newBindings);
+    }
+
+    when<P extends Protocol, BA extends ParamBindings>(satisfiableEvent: BA): Promise<Enactment<P, PB & BA>> {
+        // FIXME <any> cast of enactment
+        return when<P, Enactment<P, PB>, BA>(<any>this, satisfiableEvent);
     }
 }
 

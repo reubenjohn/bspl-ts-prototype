@@ -1,36 +1,22 @@
-import {boolean, Enactment, newEnactment, number, send, string, when} from "./adapter";
+import {boolean, newEnactment, number, send, string, when} from "./adapter";
 import {InMemoryAdapter} from "./mock_infrastructure";
 import {staticRoleBinding} from "./demo3_common";
-import {BidMessageSchema, ContractingProtocol, ContractingProtocolType} from "./demo_protocol";
+import {BidMessageSchema, ContractingEnactment, ContractingProtocol, ContractingProtocolType} from "./demo_protocol";
 import {MessageInfrastructure} from "./message_infrastructure";
 
 export async function main_contractor(mockMessageInfrastructure: MessageInfrastructure) {
     let adapter = new InMemoryAdapter<ContractingProtocolType>(ContractingProtocol, mockMessageInfrastructure, staticRoleBinding, "Contractor");
 
-    const enactment1State0 = adapter.newEnactment();
-
-    let enactment1State1: Enactment<ContractingProtocolType, {
-        contractID: number,
-        spec: string
-    }> = await when(enactment1State0, {contractID: number(), spec: string()});
-
-    const enactment2State1 = newEnactment(adapter, enactment1State1.bindings);
-
-    //FIXME spec not raising compile time error
-    let enactment1State2:
-        Enactment<ContractingProtocolType, { contractID: number, bidID: number, spec: string, amount: number }>
-        = await send<typeof enactment1State1['bindings'], ContractingProtocolType, BidMessageSchema>(enactment1State1, BidMessageSchema,
-        {bidID: 1, amount: 100});
-    // let enactment1State2_1:
-    //     Enactment<ContractingProtocolType, { contractID: number, bidID: number, spec: string, amount: number }>
-    //     = await send<typeof enactment1State2['bindings'], ContractingProtocolType, BidMessageSchema>(enactment1State2, BidMessageSchema,
-    //     {bidID: 1, amount: 100});
-
-    let enactment1State3 = await when(enactment1State2, {accepted: boolean(), closed: boolean()});
-
-    let enactment2State2: typeof enactment2State1 & Enactment<ContractingProtocolType, { amount: number }> = await send(enactment2State1, BidMessageSchema,
-        {bidID: 2, amount: 100});
-    let enactment2State3 = await when(enactment2State2, {accepted: boolean(), closed: boolean()});
-
+    const enactment = adapter.newEnactment();
+    await when(enactment, {contractID: number(), spec: string()})
+        .then(enactment => proposeAndNegotiateBid(1, 300, enactment));
 }
 
+async function proposeAndNegotiateBid(bidID: number, amount: number, enactment: ContractingEnactment<BidMessageSchema['inParams']>) {
+    return await send(newEnactment(enactment), BidMessageSchema, {bidID, amount})
+        .then(async bidEnactment => {
+            if ((await when(bidEnactment, {closed: boolean()})).bindings.hasOwnProperty('accepted'))
+                return bidEnactment;
+            else return await proposeAndNegotiateBid(bidID + 1, amount - 100, enactment);
+        });
+}
