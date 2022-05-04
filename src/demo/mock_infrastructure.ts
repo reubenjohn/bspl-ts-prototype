@@ -1,7 +1,7 @@
-import {Adapter, Enactment, send, when} from "./adapter";
-import {MessagePayload, ParamBindings} from "./binding_assertion";
-import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "./message_infrastructure";
-import {AgentIrl, decomposeIrl, MessageSchema, MessageSchemaIO, Protocol, Role, RoleBindings} from "./protocol";
+import {Adapter, Enactment, send, when} from "../adapter";
+import {MessagePayload, ParamBindings} from "../binding_assertion";
+import {AgentEndpoint, IncomingMessageListener, MessageInfrastructure} from "../message_infrastructure";
+import {AgentIrl, decomposeIrl, MessageSchema, MessageSchemaIO, Protocol, Role, RoleBindings} from "../protocol";
 import {Request, Response} from "express";
 
 const express = require('express');

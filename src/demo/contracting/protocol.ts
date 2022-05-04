@@ -1,6 +1,6 @@
-import {MessageSchema, Protocol, Role} from "./protocol";
-import {Bound, ParamBindings} from "./binding_assertion";
-import {Enactment, number, string} from "./adapter";
+import {MessageSchema, Protocol, Role} from "../../protocol";
+import {Bound, ParamBindings} from "../../binding_assertion";
+import {Enactment, number, string} from "../../adapter";
 
 export interface OfferMessageSchema extends MessageSchema {
     name: 'Offer',

@@ -1,8 +1,8 @@
-import {boolean, newEnactment, number, send, string, when} from "./adapter";
-import {InMemoryAdapter} from "./mock_infrastructure";
-import {staticRoleBinding} from "./demo3_common";
-import {BidMessageSchema, ContractingEnactment, ContractingProtocol, ContractingProtocolType} from "./demo_protocol";
-import {MessageInfrastructure} from "./message_infrastructure";
+import {boolean, newEnactment, number, send, string, when} from "../../adapter";
+import {InMemoryAdapter} from "../mock_infrastructure";
+import {staticRoleBinding} from "./common";
+import {BidMessageSchema, ContractingEnactment, ContractingProtocol, ContractingProtocolType} from "./protocol";
+import {MessageInfrastructure} from "../../message_infrastructure";
 
 export async function main_contractor(mockMessageInfrastructure: MessageInfrastructure) {
     let adapter = new InMemoryAdapter<ContractingProtocolType>(

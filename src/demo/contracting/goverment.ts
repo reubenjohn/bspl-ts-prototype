@@ -1,6 +1,6 @@
-import {newEnactment, number, send, when} from "./adapter";
-import {InMemoryAdapter} from "./mock_infrastructure";
-import {staticRoleBinding} from "./demo3_common";
+import {newEnactment, number, send, when} from "../../adapter";
+import {InMemoryAdapter} from "../mock_infrastructure";
+import {staticRoleBinding} from "./common";
 import {
     AcceptMessageSchema,
     BidMessageSchema,
@@ -9,9 +9,9 @@ import {
     ContractingProtocolType,
     OfferMessageSchema,
     RejectMessageSchema
-} from "./demo_protocol";
-import {MessageInfrastructure} from "./message_infrastructure";
-import {MessageBindings} from "./protocol";
+} from "./protocol";
+import {MessageInfrastructure} from "../../message_infrastructure";
+import {MessageBindings} from "../../protocol";
 
 async function negotiateOffer(
     enactment: ContractingEnactment<MessageBindings<OfferMessageSchema>>,

@@ -1,8 +1,8 @@
-import {main_government} from "./demo3_goverment";
-import {main_contractor} from "./demo3_contractor";
-import {MockMessageInfrastructure} from "./mock_infrastructure";
-import {decomposeIrl} from "./protocol";
-import {staticRoleBinding} from "./demo3_common";
+import {main_government} from "./goverment";
+import {main_contractor} from "./contractor";
+import {MockMessageInfrastructure} from "../mock_infrastructure";
+import {decomposeIrl} from "../../protocol";
+import {staticRoleBinding} from "./common";
 
 (async () => {
     console.log('Starting demo3');

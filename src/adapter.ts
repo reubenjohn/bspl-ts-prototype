@@ -2,7 +2,7 @@ import {MessagePayload, ParamBindings} from "./binding_assertion";
 import {MessageInfrastructure} from "./message_infrastructure";
 import {MessageSchema, MessageSchemaIO, Protocol, Role, RoleBindings} from "./protocol";
 import {minus} from "../utils";
-import {EventListener, InMemoryEnactment} from "./mock_infrastructure";
+import {EventListener, InMemoryEnactment} from "./demo/mock_infrastructure";
 
 
 export interface Adapter<P extends Protocol> {
